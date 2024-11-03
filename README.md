@@ -1,7 +1,8 @@
 # MNIST Digit Classification
 
 ## Overview
-This script implements a convolutional neural network (CNN) in PyTorch for classifying images from the MNIST dataset, which consists of grayscale images of handwritten digits (0-9).
+This script implements a convolutional neural network (CNN) in PyTorch for classifying images from the MNIST dataset for computation-limited edge device, which consists of grayscale images of handwritten digits (0-9).
+
 
 ## Requirements
 - Python 3.x
@@ -38,9 +39,9 @@ this script accepts optional arguments for training process
 The neural network implemented in this script is a convolutional neural network (CNN) for classifying MNIST digits. Here’s a detailed breakdown of its layers and operations:
 
 1. **Convolutional Layers**:
-   - `conv1`: A 2D convolutional layer with 32 filters, each of size 3x3, followed by a ReLU activation.
-   - `conv2`: A 2D convolutional layer with 64 filters, each of size 3x3, followed by a ReLU activation.
-   - `conv3`: A 2D convolutional layer with 128 filters, each of size 3x3, followed by a ReLU activation.
+   - `conv1`: A 2D convolutional layer with 32 filters, each of size 3x3, with depth 32 followed by a ReLU activation.
+   - `conv2`: A 2D convolutional layer with 64 filters, each of size 3x3, with depth 64 followed by a ReLU activation.
+   - `conv3`: A 2D convolutional layer with 128 filters, each of size 3x3, with depth 128 followed by a ReLU activation.
 
 2. **Flattening Layer**:
    - The output from the final convolutional layer is flattened to prepare it for the fully connected layer. This is done by reshaping the tensor using `view(-1, fc_input_size)` where `fc_input_size` is calculated based on the input dimensions.
