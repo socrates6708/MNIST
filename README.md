@@ -72,11 +72,42 @@ Clone this branch using
 git clone -b quantization https://github.com/socrates6708/MNIST/tree/quantization
 ```
 
-## visualization of pipeline
+
+## PTQ Process Overview
+
+The Post-Training Quantization process involves several key steps:
+
 
 [Training] -> [Preparation] -> [Calibration] -> [Conversion] -> [Inference]
 
     |              |                 |                |                |
     |              |                 |                |                |
-[Float32]       Setup           Collect Stats   Apply Quant   [Int8 Model]
-  Model       Quant Config      on Activations   Params       Ready for Use
+
+Incorporating a simple visualization diagram into a README.md file typically involves using text-based representation or embedding an image. Given the conceptual nature of the Post-Training Quantization (PTQ) process diagram I described, using a Markdown formatted text diagram might be the most straightforward approach. Here’s how you can type this visualization into your README.md for GitHub:
+
+Markdown Text Diagram in README.md
+You can create a simple ASCII-style diagram directly in your Markdown file. Here’s how you might write it:
+
+
+## PTQ Process Overview
+
+The Post-Training Quantization process involves several key steps:
+
+[Training] ---> [Preparation] ---> [Calibration] ---> [Conversion] ---> [Inference]
+
+|                |                   |                  |                  |
+|                |                   |                  |                  |
+
+[Float32] Setup Collect Stats Apply Quant [Int8 Model] Model Quant Config on Activations Params Ready for Use
+
+
+### Detailed Explanation of Each Step:
+
+- **Training**: Train the model with floating-point precision.
+- **Preparation**: Set up the model for quantization by defining quantization configurations.
+- **Calibration**: Run a representative dataset through the model to gather statistics necessary for quantization.
+- **Conversion**: Convert the model from floating-point to integer precision using the gathered statistics.
+- **Inference**: Deploy the quantized model for efficient inference on target hardware.
+
+This diagram represents the sequential flow and dependencies in the PTQ process.
+
