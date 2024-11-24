@@ -95,11 +95,6 @@ The Post-Training Quantization process involves several key steps:
 
 [Training] ---> [Preparation] ---> [Calibration] ---> [Conversion] ---> [Inference]
 
-|                |                   |                  |                  |
-|                |                   |                  |                  |
-
-[Float32] Setup Collect Stats Apply Quant [Int8 Model] Model Quant Config on Activations Params Ready for Use
-
 
 ### Detailed Explanation of Each Step:
 
