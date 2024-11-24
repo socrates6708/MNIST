@@ -60,3 +60,23 @@ During the forward pass:
   - Conv2 output: 64 channels → Conv3: 128 channels
 - The output from the last convolutional layer is flattened and passed through the fully connected layer.
 - The final output is obtained by applying the log-softmax function to the result from the fully connected layer.
+
+# Quantization branch 
+
+## Desciption 
+this branch includes the implementation of PTQ (post training quantization) to enhance performance on devices
+
+## Installation 
+Clone this branch using
+```bash
+git clone -b quantization https://github.com/socrates6708/MNIST/tree/quantization
+```
+
+## visualization of pipeline
+
+[Training] -> [Preparation] -> [Calibration] -> [Conversion] -> [Inference]
+
+    |              |                 |                |                |
+    |              |                 |                |                |
+[Float32]       Setup           Collect Stats   Apply Quant   [Int8 Model]
+  Model       Quant Config      on Activations   Params       Ready for Use
