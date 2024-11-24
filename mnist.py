@@ -133,27 +133,43 @@ def parse_arguments():
     parser.add_argument("--lr", help="learning rate", default=0.01, type=float)
     return parser.parse_args()
 
-def load_datasets(batch_size, fraction=1):
+def load_datasets(batch_size, fraction=1, calibration_fraction=0.1):
     # Load MNIST dataset and init dataloader
     train_dataset = torchvision.datasets.MNIST(".", train=True, download=True, transform=torchvision.transforms.ToTensor())
     test_dataset = torchvision.datasets.MNIST(".", train=False, download=True, transform=torchvision.transforms.ToTensor())
     num_samples = int(len(train_dataset) * fraction)
-    
+    # Calculate number of samples for training and calibration
+    num_samples = int(len(train_dataset) * fraction)
+    num_calibration_samples = int(len(train_dataset) * calibration_fraction)
+
     # Create a random subset of the dataset
     indices = np.random.choice(len(train_dataset), num_samples, replace=False)
     train_subset = Subset(train_dataset, indices)
     train_dataloader = torch.utils.data.DataLoader(train_subset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+   
+    # Create a random subset of the dataset for calibration
+    calibration_indices = np.random.choice(len(train_dataset), num_calibration_samples, replace=False)
+    calibration_subset = Subset(train_dataset, calibration_indices)
+    calibration_dataloader = torch.utils.data.DataLoader(calibration_subset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+   
+    # test dataloader remains unchanged
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=4, pin_memory=True)
-    
-    return train_dataloader, test_dataloader
+    return train_dataloader, test_dataloader, calibration_dataloader
 
-def setup_device():
+# def setup_device():
     # Check if the GPU is available
-    use_cuda = torch.cuda.is_available()
-    print(f"using CUDA {use_cuda}")
-    device = "cuda" if use_cuda else "cpu"
-    
-    return device
+    # use_cuda = torch.cuda.is_available()
+    # print(f"using CUDA {use_cuda}")
+    # device = "cuda" if use_cuda else "cpu"
+    # return device
+def setup_device(force_cpu=False):
+    if force_cpu:
+        return "cpu"
+    else:
+        use_cuda = torch.cuda.is_available()
+        print(f"Using CUDA: {use_cuda}")
+        return "cuda" if use_cuda else "cpu"
+
 
 def initialize_model_and_optimizer(lr):
     model = Backbone()
@@ -161,42 +177,65 @@ def initialize_model_and_optimizer(lr):
 
     return model, optimizer
 
-def main(training_mode=False, evaluation_model=True): 
+def main(training_mode=False, evaluation_mode=True, force_cpu=True): 
     # Parse arguments
     args = parse_arguments()
     
     # Setup device
-    device = setup_device()
-    
+    train_device = setup_device(force_cpu=False)
+    print(f"training on {train_device}")
     # Load datasets
-    train_dataloader, test_dataloader = load_datasets(args.batch)
+    train_dataloader, test_dataloader, calibration_dataloader = load_datasets(args.batch)
     
     # Initialize model and optimizer
     model, opt = initialize_model_and_optimizer(args.lr)
     opt = torch.optim.Adam(params=model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.1)
+    # Set the quantization configuration to 8-bit for weights and activations
+    qconfig = torch.quantization.get_default_qconfig('fbgemm')  # 'fbgemm' for x86 or 'qnnpack' for ARM
+    model.qconfig = qconfig
+
+    # Prepare the model for quantization
+
+
     # Train and evaluate
     if training_mode:
         for epoch in range(args.epochs):
-            train(args=args, train_dataloader=train_dataloader, model=model, device=device, optimizer=opt, epoch=epoch)
+            train(args=args, train_dataloader=train_dataloader, model=model, device=train_device, optimizer=opt, epoch=epoch)
         
         # save the trained weight of model
         torch.save(model.state_dict(),"model_weights.pth")
         print("Model weights saved successfully.")
-    if evaluation_model:
+
+    if evaluation_mode:
+        # Adjust the device for evaluation
+        eval_device = setup_device(force_cpu=True)
+        model.to(eval_device)  # Move model to the inference device
+        print(f"Evaluation on {eval_device}")
         if os.path.exists('model_weights.pth'):
-            model.load_state_dict(torch.load('model_weights.pth'))
-            model.to(device)
-            print("Model weights loaded successfully for evaluation.")
-            # evaluation
-            eval(args=args, test_dataloader=test_dataloader, model=model, device=device)
+            model.load_state_dict(torch.load('model_weights.pth', map_location=eval_device))
+            model.to(eval_device)  # Ensure model is on the correct device
+            # model prepare for calibration 
+            model.eval()
+            model_prepared = torch.quantization.prepare(model, inplace=False)
+            
+            # calibration dataloader 
+            with torch.no_grad():
+                for data, _ in calibration_dataloader:
+                    data = data.to(eval_device)
+                    model_prepared(data)
+            # transform the model to quantized one
+            model_quantized = torch.quantization.convert(model_prepared, inplace=False)
+            model_quantized.to(eval_device)
+
+            eval(args=args, test_dataloader=test_dataloader, model=model_prepared, device=eval_device)
+            
         else:
-            print("Model weights not found. Please train the model first")
+            print("Model weights not found. Please train the model first.")
 
 if __name__ == "__main__":
-    main(training_mode=False)
-
-
+    # main(training_mode=True, evaluation_mode=False)  # For training
+    main(training_mode=False, evaluation_mode=True, force_cpu=True)  # For evaluation on CPU
 
 
 
